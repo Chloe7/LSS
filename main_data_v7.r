@@ -1,7 +1,7 @@
 # X.train is scaled and centered
 
 #setwd("C:/Users/chloe/Documents/Research-2015/current")
-#source("main_data_v6.r")
+#source("main_data_v7.r")
 
 #install.packages("Matrix")
 library(Matrix)
@@ -10,11 +10,12 @@ library(MASS)
 
 
 #source file in the same directory
-source(paste0(getwd(),"/stiefel.v5.h.r"))
+#source(paste0(getwd(),"/stiefel.v5.h.r"))
+source(paste0(getwd(),"/stiefel.v6.h.r"))
 source(paste0(getwd(),"/ls.stiefel.h.r"))
 source(paste0(getwd(),"/dfm.h.r"))
 source(paste0(getwd(),"/genPosDefMat.r"))
-source(paste0(getwd(),"/simulateFactorModel.r"))
+source(paste0(getwd(),"/simulateFactorModel.v2.r"))
 #source(paste0(getwd(),"/simXandY.orthon.r"))
 source(paste0(getwd(),"/sink.reset.r"))
 source(paste0(getwd(),"/genData.r"))
@@ -44,9 +45,10 @@ generateMCData <- function( T.vec=c(100, 300, 500),
                             n.vec=c(50, 100, 150, 200, 500, 1000), 
 							r=2, 
 							n.mc=100, 
-							fac.obs.noise.ratio = 1,
 							Lambda.true = matrix( runif(n*r, min=0, max=1) , nrow=n, ncol=r),
 							Phi.true = list(matrix(c(0.7, 0, 0, -0.2), r, r)),
+							fac.err.var.scalar = 1,
+	                        obs.err.var.scalar = 1,
                             Y.start = c(5, 1),
                             out.dir	= directory("data")					
 						   ) {
@@ -66,17 +68,17 @@ generateMCData <- function( T.vec=c(100, 300, 500),
 	  set.seed(20141221)
       Lambda.true = matrix( runif(n*r, min=0, max=1) , nrow=n, ncol=r) 
       #Phi.true = list(matrix(c(0.7, 0, 0, -0.2), r, r)) 	  
-	  fac.err.sd.true = diag(r) * fac.obs.noise.ratio
-	  obs.err.sd.true = diag(n) 	  
+	  fac.err.var.true = diag(r) * fac.err.var.scalar
+	  obs.err.var.true = diag(n) * obs.err.var.scalar	  
 	  sim.data.list <- replicate(n = n.mc,
-		                         expr = simulateFactorModel(n=n, r=r, T=T+50, Lambda=Lambda.true, Phi=Phi.true, Y.start = Y.start, fac.err.sd=fac.err.sd.true, obs.err.sd=obs.err.sd.true),
+		                         expr = simulateFactorModel(n=n, r=r, T=T+50, Lambda=Lambda.true, Phi=Phi.true, Y.start = Y.start, fac.err.var=fac.err.var.true, obs.err.var=obs.err.var.true),
                                  simplify = FALSE)	
-      name.string = paste0("XY.r",r, "T",T, "n",n, ".FONR",fac.obs.noise.ratio)						 
+      name.string = paste0("XY.r",r, "T",T, "n",n, ".ON",obs.err.var.scalar,"FN", fac.err.var.scalar)						 
 	  assign(name.string, 
 	         list(Lambda.true=Lambda.true, 
 			      Phi.true=Phi.true,
-				  fac.err.sd.true=fac.err.sd.true,
-				  obs.err.sd.true=obs.err.sd.true,
+				  fac.err.var.true=fac.err.var.true,
+				  obs.err.var.true=obs.err.var.true,
 				  sim.data.list=sim.data.list))	  
 	  #str(get(name.string))	  
 	  save(list=name.string, file=file.path(out.dir, paste0(name.string, ".RData")))
@@ -89,16 +91,17 @@ DFMSimulation <- function( T.vec=c(100, 300),
                            n.vec=c(50, 100, 150, 200, 500, 700,1000), 
 						   r=2, 
 						   n.mc=100, 
-						   fac.obs.noise.ratio = 1,
+						   fac.err.var.scalar = 1,
+	                       obs.err.var.scalar = 1,
 						   h = 1,
-						   w = 1,
+						   w = obs.err.var.scalar/fac.err.var.scalar,
 						   in.dir = directory("data"),
 						   out.dir	= directory("results"),
 						   seed = 20141221
 						 ) {  
   
   #--- MC simulation --- 
-  sink(file.path(out.dir, paste0("MC.simulation.r",r, ".FONR",fac.obs.noise.ratio, ".log")))
+  sink(file.path(out.dir, paste0("MC.simulation.r",r, ".ON",obs.err.var.scalar,"FN", fac.err.var.scalar, "w",w, ".log")))
   
   res.summary = NULL
   for(T in T.vec) {
@@ -106,7 +109,7 @@ DFMSimulation <- function( T.vec=c(100, 300),
     for(n in n.vec) {
 	  # n = 1000; T = 300
 	  
-	  w = n / r * 1/fac.obs.noise.ratio
+	  #w = obs.err.var.scalar / fac.err.var.scalar
 	  
 	  ptm.lss = NULL
       ptm.pca = NULL	   
@@ -147,9 +150,9 @@ DFMSimulation <- function( T.vec=c(100, 300),
       Xh.pred.mse.oracle <- rep(NA, n.mc)
 
 	  # n = 150; T = 300	   
-	  # Load simulation data
-	  name.string = paste0("XY.r",r, "T",T, "n",n, ".FONR",fac.obs.noise.ratio)
-	  load.name = load(file=file.path(in.dir, paste0(name.string, ".RData")))	 
+	  # Load simulation data	  
+	  name.string = paste0("r",r, "T",T, "n",n, ".ON",obs.err.var.scalar,"FN", fac.err.var.scalar)
+	  load.name = load(file=file.path(in.dir, paste0("XY.", name.string, ".RData")))	 
       sim.dfm = get(load.name)
 	  rm(list = c(load.name))
 	  sim.data.total = length(sim.dfm$sim.data.list)
@@ -177,7 +180,7 @@ DFMSimulation <- function( T.vec=c(100, 300),
 		 
 		 # LS Stiefel 
 		 proc.start = proc.time()
-		 lss.res = ls.stiefel(X.train, r=r, w=w, i.mc=i)            
+		 lss.res = ls.stiefel(X.train, r=r, w=w, i.mc=i, out.dir=out.dir, out.file=paste0("curvilinear_search.",name.string,"w",w,".log"))            
          proc.time() - proc.start			 
          ptm.lss = rbind(ptm.lss, (proc.time() - proc.start)["elapsed"])
 	     Y.lss = lss.res$Y[,,lss.res$k.opt]
@@ -281,11 +284,13 @@ DFMSimulation <- function( T.vec=c(100, 300),
 	  } # end n
 	} # end T
 	
-	write.table(res.summary, file=file.path(out.dir, paste0("summary.all.","r",r,".FONR",fac.obs.noise.ratio,".w",w, ".csv")), sep="|", row.names=FALSE, append=TRUE)
+	summary.name.string = paste0("summary.all.","r",r,".ON",obs.err.var.scalar,"FN", fac.err.var.scalar,".w",w)
+	
+	write.table(res.summary, file=file.path(out.dir, paste0(summary.name.string, ".csv")), sep="|", row.names=FALSE, append=TRUE)
   
-    write.table(res.summary[which(res.summary$Describ == "Mean"), ], sep="|", file=file.path(out.dir, paste0("summary.all.","r",r,".FONR",fac.obs.noise.ratio,".w",w, ".mean.csv")), row.names=FALSE, append=TRUE)
+    write.table(res.summary[which(res.summary$Describ == "Mean"), ], sep="|", file=file.path(out.dir, paste0(summary.name.string, ".mean.csv")), row.names=FALSE, append=TRUE)
 	   
-    write.table(res.summary[which(res.summary$Describ == "Sd"), ], sep="|", file=file.path(out.dir, paste0("summary.all.","r",r,".FONR",fac.obs.noise.ratio,".w",w, ".sd.csv")), row.names=FALSE, append=TRUE)
+    write.table(res.summary[which(res.summary$Describ == "Sd"), ], sep="|", file=file.path(out.dir, paste0(summary.name.string, ".sd.csv")), row.names=FALSE, append=TRUE)
 		
 	sink.reset()
 }
@@ -294,21 +299,23 @@ DFMSimulation <- function( T.vec=c(100, 300),
 main.r2 <- function() {
   
   h <- 1  #- forecasting length 
-  T.vec <- c(100, 300) 
-  n.vec <- c(50, 100, 150, 200, 500, 1000)
+  # T <- 100; n <- 150
+  T.vec <- c(100)
+  n.vec <- c(200)
+  #T.vec <- c(100, 300) 
+  #n.vec <- c(50, 100, 150, 200, 500, 1000)
   #n.vec <- c(200, 500, 1000)
   r <- 2
-  n.mc <- 100
+  n.mc <- 10
   
-  fac.obs.noise.ratio = 0.1   # with w = 10 in ls.stiefel()
-  #fac.obs.noise.ratio = 1
-  w = 1/fac.obs.noise.ratio
+  obs.err.var.scalar = 5
+  fac.err.var.scalar = 1
+  w = obs.err.var.scalar / fac.err.var.scalar
   
-  generateMCData( T.vec=T.vec, n.vec=n.vec, r=r, n.mc=n.mc, fac.obs.noise.ratio = fac.obs.noise.ratio, Lambda.true = matrix( runif(n*r, min=0, max=1) , nrow=n, ncol=r), Phi.true = list(matrix(c(0.7, 0, 0, -0.2), r, r)), Y.start = c(5, 1), out.dir	= directory("data") )
+  generateMCData( T.vec=T.vec, n.vec=n.vec, r=r, n.mc=n.mc, obs.err.var.scalar = obs.err.var.scalar, fac.err.var.scalar = fac.err.var.scalar, Lambda.true = matrix( runif(n*r, min=0, max=1) , nrow=n, ncol=r), Phi.true = list(matrix(c(0.7, 0, 0, -0.2), r, r)), Y.start = c(5, 1), out.dir = directory("data") )
   
-  DFMSimulation( T.vec=T.vec, n.vec=n.vec, r=r, n.mc=n.mc, fac.obs.noise.ratio = fac.obs.noise.ratio, h = h, w=w, in.dir = directory("data"), out.dir	= directory("results"), seed = 20141221 ) 
+  DFMSimulation( T.vec=T.vec, n.vec=n.vec, r=r, n.mc=n.mc, obs.err.var.scalar = obs.err.var.scalar, fac.err.var.scalar = fac.err.var.scalar, h = h, w=w, in.dir = directory("data"), out.dir = directory("results"), seed = 20141221 ) 
 
-  
 }
 
 main.r3 <- function() {
@@ -342,7 +349,7 @@ main.r5 <- function() {
   fac.obs.noise.ratio = 1
   # fac.obs.noise.ratio = 0.1   # with w = 10 in ls.stiefel()
   
-  generateMCData( T.vec=T.vec, n.vec=n.vec, r=r, n.mc=n.mc, fac.obs.noise.ratio = fac.obs.noise.ratio, Phi.true = list(matrix(c(0.7, 0, 0, 0, -0.4, 0, 0, 0, 0.1), r, r)), Y.start = c(5, 1, 3) )
+  generateMCData( T.vec=T.vec, n.vec=n.vec, r=r, n.mc=n.mc, Phi.true = list(matrix(c(0.7, 0, 0, 0, -0.4, 0, 0, 0, 0.1), r, r)), fac.err.var.true = diag(r), obs.err.var.true = diag(n),Y.start = c(5, 1, 3) )
   
   DFMSimulation( T.vec=T.vec, n.vec=n.vec, r=r, n.mc=n.mc, fac.obs.noise.ratio = fac.obs.noise.ratio, h = h, w=1/fac.obs.noise.ratio) 
 

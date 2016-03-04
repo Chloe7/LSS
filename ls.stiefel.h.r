@@ -1,5 +1,5 @@
 # X = X.train; r = r; w = 1; K = 1000; H = 5; i.mc = 1;
-ls.stiefel = function( X, r=2, w=1, K=1000, H=5, i.mc ) {
+ls.stiefel = function( X, r=2, w=1, K=1000, H=5, i.mc, out.dir ,out.file ) {
   #w = 1
   #K = 1000  # maximum number of iteration
   n = ncol(X)
@@ -30,7 +30,7 @@ ls.stiefel = function( X, r=2, w=1, K=1000, H=5, i.mc ) {
   conv.relative.change.ylmean = FALSE
   proc.start = proc.time()
   k = 1
-  sink(paste(getwd(),"/curvilinear_search.n",n, "r",r, "T",T, ".log",sep=""),append=TRUE)
+  sink(file.path(out.dir, out.file), append=TRUE)
   cat("@@@@@ Monte Carlo Step ", i.mc, " @@@@@\n"); flush.console()
   while(k < K) {  
     U = cbind(G[,,k], Y[,,k])

@@ -62,10 +62,10 @@ loss_func <- function(X, Y, w=1) {
 	#G2 = G2 - 2 * ( as.numeric(t(Ei)%*%t(S01)%*%Ei) * as.numeric(t(Ei)%*%S00%*%Ei)^(-1) * (B + t(B)) %*% Y %*% Ei %*% t(Ei) - as.numeric(t(Ei)%*%t(S01)%*%Ei)^2 * as.numeric(t(Ei)%*%S00%*%Ei)^(-2) * C %*% Y %*% Ei %*% t(Ei) )
 	G2 = G2 - 2 * ( S01[i,i] * S00[i,i]^(-1) * (B + t(B)) %*% Y %*% Ei %*% t(Ei) - S01[i,i]^2 * S00[i,i]^(-2) * C %*% Y %*% Ei %*% t(Ei) )	
   }
-  L = L1 + w * L2
-  G = G1 + w * G2
+  L = 1/n * L1 + w/r * L2
+  G = 1/n * G1 + w/r* G2
   
-  return(list(L=L, G=G, L1=L1, L2=L2))
+  return(list(L=L, G=G, L1=L1, L2=L2, G1=G1, G2=G2))
 }
 
 

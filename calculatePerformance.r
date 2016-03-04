@@ -143,18 +143,20 @@ calculatePerformance <- function( T.vec=c(100, 300),
 
 	  # n = 150; T = 300	   
 	  # Load simulation data
-	  name.string = paste0("XY.r",r, "T",T, "n",n, ".FONR",fac.obs.noise.ratio)
-	  load.name = load(file=file.path(in.dir, paste0(name.string, ".RData")))	 
+	  name.string = paste0("r",r, "T",T, "n",n, ".ON",obs.err.var.scalar,"FN", fac.err.var.scalar)
+	  load.name = load(file=file.path(in.dir, paste0("XY.", name.string, ".RData")))	 
       sim.dfm = get(load.name)
 	  rm(list = c(load.name))
 	  sim.data.total = length(sim.dfm$sim.data.list)
+	  
 	  
 	  Lambda.true = t(sim.dfm$Lambda.true)
 	  Phi.true = sim.dfm$Phi.true
 	  Phi1.true = Phi.true[[1]]
 	  var.order = length(Phi.true)
 	  
-	  load.name = load(file=file.path(out.dir, paste0("res.",name.string,".w",w, ".RData")))	 
+	  #load.name = load(file=file.path(out.dir, paste0("res.",name.string,".w",w, ".RData")))	 
+	  load.name = load(file=file.path(out.dir, "res.XY.r2T100n50.ON3FN1.w3.RData"))	 
       sim.result.list = get(load.name)
 	  rm(list = c(load.name))
 	  
